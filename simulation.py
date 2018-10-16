@@ -1,9 +1,10 @@
-import pdb
+from timeit import default_timer as timer
 import descartes
 import numpy as np
 from matplotlib import animation
 from matplotlib import pyplot as plt
 from shapely.geometry import box, Point, LineString
+from shapely.ops import cascaded_union, linemerge
 
 WIDTH = 50
 HEIGHT = 50
@@ -20,7 +21,7 @@ class Environment:
 		self.balls = []
 		self.sensors = []
 		self.box = box(0,0,width,height)
-		self.env_map = [[0 for x in range(self.width)] for y in range(self.height)]
+		self.env_grid = [[0 for x in range(self.width)] for y in range(self.height)]
 	
 	def add_ball(self, x, y, radius, direction):
 		self.balls.append(Ball(x,y,radius,direction))
@@ -76,21 +77,15 @@ class Environment:
 
 	def update(self):
 		offscreen = []
-		self.env_map = [[0 for x in range(self.width)] for y in range(self.height)]
+		self.env_grid = [[0 for x in range(self.width)] for y in range(self.height)]
+		ball_polys = [Point(ball.x,ball.y).buffer(ball.radius) for ball in self.balls]
+		ball_poly = cascaded_union(ball_polys)
+		for x in range(self.width):
+			for y in range(self.height):
+				b = box(x,y,x+1,y+1)
+				if ball_poly.intersects(b):
+					self.env_grid[self.height-1-y][x] = 1
 		for ball in self.balls:
-			"""
-			b1 = Point(ball.x,ball.y).buffer(ball.radius)
-			b2 = Point(ball.x,ball.y).buffer(ball.radius)
-			x,y = b1.intersection(b2).coords.xy
-			print(x)
-			print(y)
-			exit(0)
-			for i in range(len(x)):
-				xcoord = x[i]
-				ycoord = y[i]
-				print('({0},{1})'.format(xcoord,ycoord))
-			exit(0)
-			"""
 			ball.move()
 			if not self.onscreen(ball):
 				offscreen.append(ball)
@@ -101,6 +96,10 @@ class Environment:
 			self.add_ball(xpos,ypos,r,direction)
 	
 
+	def print_grid(self):
+		for y in range(self.height):
+			print(self.env_grid[y])	
+	
 	def get_balls(self):
 		return self.balls	
 	
@@ -176,7 +175,7 @@ class Gui():
 		for sensor in self.env.sensors:
 			patches += sensor.update_raytrace(polygons)
 			sensor.update_sensor_grids()
-			#sensor.print_visibility_grid()	
+			sensor.print_visibility_grid()	
 			#sensor.print_occupancy_grid()	
 	
 		# update environment
@@ -352,23 +351,24 @@ class Sensor:
 	def update_sensor_grids(self):
 		self.visibility_grid = [[0 for x in range(self.width)] for y in range(self.height)]
 		self.occupancy_grid = [[0 for x in range(self.width)] for y in range(self.height)]
-		#offset = np.tan(np.radians(1))/2
+		lines = [ray.LineString for ray in self.rays]
+		linepoly = linemerge(lines)		
+		for x in range(self.width):
+			for y in range(self.height):
+				b = box(x,y,x+1,y+1)
+				if linepoly.intersects(b):
+					self.visibility_grid[self.height-1-y][x] = 1 
+				"""
+				for ray in self.rays:
+					if ray.LineString.intersects(b):
+						self.visibility_grid[self.height-1-y][x] = 1 
+						break		
+				"""	
 		for ray in self.rays:
-			"""	
-			for x in range(self.width):
-				for y in range(self.height):
-					x_dist = ray.x2 - ray.x
-					y_dist = ray.y2 - ray.y
-					if ray.theta != 90:
-						if x != 0
-						if (y/x) > np.tan(np.radians(ray.theta))-offset and (y/x) > np.tan(np.radians(ray.theta))+offset:
-							visibility_grid[self.height-1-y][x] = 1
-		    """	
 			x_index = int(ray.x2)
 			y_index = int(ray.y2)
 			if(x_index >= 0 and x_index < self.width and y_index >= 0 and y_index < self.height):
 				self.occupancy_grid[self.height-1-y_index][x_index] = 1
-				#self.visibility_grid[self.height-1-y_index][x_index] = 1
 
 	def print_visibility_grid(self):
 		for y in range(self.height):
@@ -403,10 +403,25 @@ def main():
 	#env.add_sensor(3) # West Sensor
 	gui = Gui(env)
 
-	ani = animation.FuncAnimation(gui.fig, gui.animate, init_func=gui.init,
-								  frames=600, interval=DELAY, blit=True)
+	#ani = animation.FuncAnimation(gui.fig, gui.animate, init_func=gui.init,
+	#							  frames=600, interval=DELAY, blit=True)
 
-	plt.show()	
+	#plt.show()	
+	
+	for x in range(20000):
+		start = timer()
+		polygons = []
+		for ball in env.balls:
+			polygons.append(Point(ball.x,ball.y).buffer(ball.radius))
+		for sensor in env.sensors:
+			sensor.update_raytrace(polygons)
+			sensor.update_sensor_grids()
+			#sensor.print_visibility_grid()	
+			#sensor.print_occupancy_grid()
+		#env.print_grid()
+		env.update()
+		end = timer()
+		print('{0}: {1}, {2}'.format(str(x), str(end-start), str(len(env.balls))))	
 
 
 if __name__ == '__main__':
