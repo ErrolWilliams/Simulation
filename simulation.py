@@ -9,9 +9,17 @@ from shapely.ops import cascaded_union, linemerge
 WIDTH = 50
 HEIGHT = 50
 MAX_SIZE = 5
-MAX_BALLS = 5
-STEP = 1
+MAX_BALLS = 8
 DELAY = 1
+
+NORTH = 0
+NORTHEAST = 1
+EAST = 2
+SOUTHEAST = 3
+SOUTH = 4
+SOUTHWEST = 5
+WEST = 6
+NORTHWEST = 7
 
 class Environment:
 
@@ -22,25 +30,14 @@ class Environment:
 		self.sensors = []
 		self.box = box(0,0,width,height)
 		self.env_grid = [[0 for x in range(self.width)] for y in range(self.height)]
+		self.steps = 0
 	
-	def add_ball(self, x, y, radius, direction):
-		self.balls.append(Ball(x,y,radius,direction))
+	def add_ball(self, x, y, radius, direction, speed):
+		self.balls.append(Ball(x,y,radius,direction, speed))
 
 		
-	def add_sensor(self, position):
-		if position == 0:  # top
-			sensor = Sensor(self.width/2, self.height, 2, self.width, self.height)
+	def add_sensor(self, sensor):
 			self.sensors.append(sensor)
-		elif position == 1: # right
-			sensor = Sensor(self.width, self.height/2, 3, self.width, self.height)
-			self.sensors.append(sensor)
-		elif position == 2: # bottom 
-			sensor = Sensor(self.width/2, 0, 0, self.width, self.height)
-			self.sensors.append(sensor)
-		else:               # left
-			sensor = Sensor(0, self.height/2, 1, self.width, self.height)
-			self.sensors.append(sensor)
-
 
 	def onscreen(self, ball):
 		b = Point(ball.x, ball.y).buffer(ball.radius)
@@ -76,6 +73,7 @@ class Environment:
 			return self.get_valid_randoms()
 
 	def update(self):
+		self.steps += 1
 		offscreen = []
 		self.env_grid = [[0 for x in range(self.width)] for y in range(self.height)]
 		ball_polys = [Point(ball.x,ball.y).buffer(ball.radius) for ball in self.balls]
@@ -90,10 +88,11 @@ class Environment:
 			if not self.onscreen(ball):
 				offscreen.append(ball)
 		self.balls = [ball for ball in self.balls if ball not in offscreen]
-		if len(self.balls) < np.random.randint(0, MAX_BALLS+1):
+		if len(self.balls) < np.random.randint(1, MAX_BALLS):
 			xpos, ypos, r = self.get_valid_randoms()
 			direction = np.random.randint(0,7)
-			self.add_ball(xpos,ypos,r,direction)
+			speed = np.random.randint(1,10)
+			self.add_ball(xpos,ypos,r,direction,speed)
 	
 
 	def print_grid(self):
@@ -106,35 +105,36 @@ class Environment:
 		
 class Ball:
 
-	def __init__(self, x, y, radius, direction):
+	def __init__(self, x, y, radius, direction, speed):
 		self.x = x
 		self.y = y
 		self.radius = radius
 		self.direction = direction
+		self.speed = speed
 		self.onscreen = False
 
 
 	def move(self): 
-		if self.direction == 0:
-			self.x += STEP
-		elif self.direction == 1:
-			self.x += STEP
-			self.y += STEP
-		elif self.direction == 2:
-			self.y += STEP	
-		elif self.direction == 3:
-			self.x -= STEP
-			self.y += STEP
-		elif self.direction == 4:
-			self.x -= STEP
-		elif self.direction == 5:
-			self.y -= STEP
-			self.x -= STEP
-		elif self.direction == 6:
-			self.y -= STEP
-		elif self.direction == 7:
-			self.x += STEP
-			self.y -= STEP
+		if self.direction == NORTH:
+			self.y += self.speed
+		elif self.direction == NORTHEAST:
+			self.x += self.speed
+			self.y += self.speed
+		elif self.direction == EAST:
+			self.x += self.speed	
+		elif self.direction == SOUTHEAST:
+			self.x += self.speed
+			self.y -= self.speed
+		elif self.direction == SOUTH:
+			self.y -= self.speed
+		elif self.direction == SOUTHWEST:
+			self.y -= self.speed
+			self.x -= self.speed
+		elif self.direction == WEST:
+			self.x -= self.speed
+		elif self.direction == NORTHWEST:
+			self.x -= self.speed
+			self.y += self.speed
 
 
 class Gui():
@@ -175,7 +175,7 @@ class Gui():
 		for sensor in self.env.sensors:
 			patches += sensor.update_raytrace(polygons)
 			sensor.update_sensor_grids()
-			sensor.print_visibility_grid()	
+			#sensor.print_visibility_grid()	
 			#sensor.print_occupancy_grid()	
 	
 		# update environment
@@ -204,7 +204,7 @@ class Sensor:
 		y = self.y
 		width = self.width
 		height = self.height
-		if self.direction == 0: # facing up
+		if self.direction == NORTH: # facing up
 			self.color = 'red'
 			for i in range(90):
 				x2 = width
@@ -229,7 +229,38 @@ class Sensor:
 			ray3 = Sensor.Ray(x,y,x,width,90)
 			self.fixed_rays.append(fixed_ray3)
 			self.rays.append(ray3)
-		elif self.direction == 1: # facing right
+		elif self.direction == NORTHEAST:
+			self.color = 'purple'
+			for i in range(90):
+				if i != 45:
+					x2 = y/np.tan(45+i) + x
+					if x2 <= width:
+						y2 = 0
+						x3 = 0
+						y3 = x2
+					else:
+						x2 = width
+						y2 = np.tan(45+i)*(width-x2)
+						x3 = y2
+						y3 = height
+					fixed_ray1 = Sensor.Ray(x,y,x2,y2,i)
+					fixed_ray2 = Sensor.Ray(x,y,x3,y3,i+91)
+					ray1 = Sensor.Ray(x,y,x2,y2,i)
+					ray2 = Sensor.Ray(x,y,x3,y3,i+91)
+				else:
+					fixed_ray1 = Sensor.Ray(x,y,width,y,45)
+					fixed_ray2 = Sensor.Ray(x,y,x,height,135)
+					ray1 = Sensor.Ray(x,y,x2,y2,45)
+					ray2 = Sensor.Ray(x,y,x3,y3,135)
+				self.fixed_rays.append(fixed_ray1)
+				self.fixed_rays.append(fixed_ray2)
+				self.rays.append(ray1)
+				self.rays.append(ray2)
+			fixed_ray3 = Sensor.Ray(x,y,width,height,90) # ray for 90 degrees
+			ray3 = Sensor.Ray(x,y,width,height,90)
+			self.fixed_rays.append(fixed_ray3)
+			self.rays.append(ray3)
+		elif self.direction == EAST: # facing right
 			self.color = 'blue'
 			for i in range(90):
 				x2 = y * np.tan(np.radians(i))
@@ -254,7 +285,7 @@ class Sensor:
 			ray3 = Sensor.Ray(x,y,width,y,90)
 			self.fixed_rays.append(fixed_ray3)
 			self.rays.append(ray3)
-		elif self.direction == 2: # facing down
+		elif self.direction == SOUTH: # facing down
 			self.color = 'green'
 			for i in range(90):
 				x2 = 0
@@ -397,32 +428,59 @@ class Sensor:
 def main():
 
 	env = Environment(WIDTH, HEIGHT)
-	#env.add_sensor(0) # North Sensor
-	#env.add_sensor(1) # East Sensor
-	env.add_sensor(2) # South Sensor
-	#env.add_sensor(3) # West Sensor
-	gui = Gui(env)
+	
+	# Sensor Creation
+	sensor_0 = Sensor(WIDTH/2, HEIGHT, SOUTH, WIDTH, HEIGHT) # top center
+	#sensor_1 = Sensor(WIDTH, HEIGHT, SOUTHWEST, WIDTH, HEIGHT) # top right
+	sensor_2 = Sensor(WIDTH, HEIGHT/2, WEST, WIDTH, HEIGHT) # right center
+	#sensor_3 = Sensor(WIDTH, 0, NORTHWEST, WIDTH, HEIGHT) # bottom right
+	sensor_4 = Sensor(WIDTH/2, 0, NORTH, WIDTH, HEIGHT) # bottom center
+	#sensor_5 = Sensor(0, 0, NORTHEAST, WIDTH, HEIGHT) # bottom left
+	sensor_6 = Sensor(0, HEIGHT/2, EAST, WIDTH, HEIGHT) # left center
+	#sensor_7 = Sensor(0, HEIGHT, SOUTHEAST, WIDTH, HEIGHT) # top left
+	
+	env.add_sensor(sensor_0)
+	#env.add_sensor(sensor_1)
+	env.add_sensor(sensor_2)
+	#env.add_sensor(sensor_3)
+	env.add_sensor(sensor_4)
+	#env.add_sensor(sensor_5)
+	env.add_sensor(sensor_6)
+	#env.add_sensor(sensor_7)
+		
+	#gui = Gui(env)
 
 	#ani = animation.FuncAnimation(gui.fig, gui.animate, init_func=gui.init,
-	#							  frames=600, interval=DELAY, blit=True)
+								  #frames=600, interval=DELAY, blit=True)
 
 	#plt.show()	
-	
-	for x in range(20000):
+
+	data = []	
+	while(env.steps < 10):
 		start = timer()
 		polygons = []
+		step_data = []
 		for ball in env.balls:
 			polygons.append(Point(ball.x,ball.y).buffer(ball.radius))
-		for sensor in env.sensors:
+		step_data.append(env.env_grid)
+		#print('Step {0} environment'.format(env.steps))
+		#env.print_grid()
+		for i,sensor in enumerate(env.sensors):
+			sensor_data = []
 			sensor.update_raytrace(polygons)
 			sensor.update_sensor_grids()
+			sensor_data.append(sensor.visibility_grid)
+			sensor_data.append(sensor.occupancy_grid)
+			#print('Sensor {0} visibility grid at step {1}'.format(i, env.steps))
 			#sensor.print_visibility_grid()	
+			#print('Sensor {0} occupancy grid at step {1}'.format(i, env.steps))
 			#sensor.print_occupancy_grid()
-		#env.print_grid()
+			step_data.append(sensor_data)
+		data.append(step_data)	
 		env.update()
 		end = timer()
-		print('{0}: {1}, {2}'.format(str(x), str(end-start), str(len(env.balls))))	
-
+		print('{0}: {1}, {2}'.format(str(env.steps), str(end-start), str(len(env.balls))))	
+	np.save('training_data', data)
 
 if __name__ == '__main__':
 	main()	
