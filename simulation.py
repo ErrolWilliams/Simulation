@@ -1,6 +1,7 @@
 from timeit import default_timer as timer
 import descartes
 import numpy as np
+import pdb
 from matplotlib import animation
 from matplotlib import pyplot as plt
 from shapely.geometry import box, Point, LineString
@@ -175,7 +176,7 @@ class Gui():
 		for sensor in self.env.sensors:
 			patches += sensor.update_raytrace(polygons)
 			sensor.update_sensor_grids()
-			#sensor.print_visibility_grid()	
+			sensor.print_visibility_grid()	
 			#sensor.print_occupancy_grid()	
 	
 		# update environment
@@ -347,7 +348,7 @@ class Sensor:
 		self.plots = plot
 
 	def update_raytrace(self, objects):
-		for i,ray in enumerate(self.plots):
+		for i in range(181):
 			xmin = 2 * self.width
 			ymin = 2 * self.height
 			xval = 2 * self.width
@@ -376,7 +377,8 @@ class Sensor:
 			self.rays[i].update_ray(xval,yval)
 			updated_ray = self.rays[i]
 			x,y = updated_ray.LineString.xy
-			ray.set_data(x,y)
+			if len(self.plots)-1 >= i:
+				self.plots[i].set_data(x,y)
 		return self.plots
 
 	def update_sensor_grids(self):
@@ -389,12 +391,6 @@ class Sensor:
 				b = box(x,y,x+1,y+1)
 				if linepoly.intersects(b):
 					self.visibility_grid[self.height-1-y][x] = 1 
-				"""
-				for ray in self.rays:
-					if ray.LineString.intersects(b):
-						self.visibility_grid[self.height-1-y][x] = 1 
-						break		
-				"""	
 		for ray in self.rays:
 			x_index = int(ray.x2)
 			y_index = int(ray.y2)
@@ -451,21 +447,23 @@ def main():
 	#gui = Gui(env)
 
 	#ani = animation.FuncAnimation(gui.fig, gui.animate, init_func=gui.init,
-								  #frames=600, interval=DELAY, blit=True)
+	#							  frames=600, interval=DELAY, blit=True)
 
 	#plt.show()	
 
+
+		
 	data = []	
-	while(env.steps < 10):
+	while(env.steps < 20):
 		start = timer()
-		polygons = []
 		step_data = []
+		polygons = []
 		for ball in env.balls:
 			polygons.append(Point(ball.x,ball.y).buffer(ball.radius))
 		step_data.append(env.env_grid)
 		#print('Step {0} environment'.format(env.steps))
 		#env.print_grid()
-		for i,sensor in enumerate(env.sensors):
+		for sensor in env.sensors:
 			sensor_data = []
 			sensor.update_raytrace(polygons)
 			sensor.update_sensor_grids()
@@ -473,7 +471,7 @@ def main():
 			sensor_data.append(sensor.occupancy_grid)
 			#print('Sensor {0} visibility grid at step {1}'.format(i, env.steps))
 			#sensor.print_visibility_grid()	
-			#print('Sensor {0} occupancy grid at step {1}'.format(i, env.steps))
+			#print('Sensor {0} occupancy grid at step {1}'.format(env.steps, env.steps))
 			#sensor.print_occupancy_grid()
 			step_data.append(sensor_data)
 		data.append(step_data)	
