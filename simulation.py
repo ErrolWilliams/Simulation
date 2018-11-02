@@ -1,9 +1,8 @@
 from timeit import default_timer as timer
-import descartes
+#import descartes
 import numpy as np
-import pdb
-from matplotlib import animation
-from matplotlib import pyplot as plt
+#from matplotlib import animation
+#from matplotlib import pyplot as plt
 from shapely.geometry import box, Point, LineString
 from shapely.ops import cascaded_union, linemerge
 
@@ -11,16 +10,19 @@ WIDTH = 50
 HEIGHT = 50
 MAX_SIZE = 5
 MAX_BALLS = 8
+MAX_SPEED = 3 
+KICK_START = 6
+NUM_STEPS = 20
 DELAY = 1
 
-NORTH = 0
+EAST = 0
 NORTHEAST = 1
-EAST = 2
-SOUTHEAST = 3
-SOUTH = 4
+NORTH = 2
+NORTHWEST = 3
+WEST = 4
 SOUTHWEST = 5
-WEST = 6
-NORTHWEST = 7
+SOUTH = 6
+SOUTHEAST = 7
 
 class Environment:
 
@@ -58,24 +60,30 @@ class Environment:
 		if side == 0:  # bottom
 			x = np.random.randint(0,self.width)
 			y = 0
+			dirs = [0,1,2,3,4]
+			d = np.random.choice(dirs)
 		elif side == 1:  # left
 			x = 0
 			y = np.random.randint(0,self.height)	
+			dirs = [6,7,0,1,2]
+			d = np.random.choice(dirs)
 		elif side == 2:  # right
 			x = self.width
 			y = np.random.randint(0,self.height)	
+			dirs = [2,3,4,5,6]
+			d = np.random.choice(dirs)
 		else:			# top
 			x = np.random.randint(0,self.width)
 			y = self.height
+			dirs = [4,5,6,7,0]
+			d = np.random.choice(dirs)
 		r = np.random.randint(1, MAX_SIZE)
 		if self.valid_start(x,y,r):
-			return x,y,r
+			return x,y,r,d
 		else:
 			return self.get_valid_randoms()
-
-	def update(self):
-		self.steps += 1
-		offscreen = []
+	
+	def update_grid(self):
 		self.env_grid = [[0 for x in range(self.width)] for y in range(self.height)]
 		ball_polys = [Point(ball.x,ball.y).buffer(ball.radius) for ball in self.balls]
 		ball_poly = cascaded_union(ball_polys)
@@ -84,16 +92,33 @@ class Environment:
 				b = box(x,y,x+1,y+1)
 				if ball_poly.intersects(b):
 					self.env_grid[self.height-1-y][x] = 1
+
+
+	def update(self):
+		self.steps += 1
+		offscreen = []
 		for ball in self.balls:
 			ball.move()
 			if not self.onscreen(ball):
 				offscreen.append(ball)
 		self.balls = [ball for ball in self.balls if ball not in offscreen]
 		if len(self.balls) < np.random.randint(1, MAX_BALLS):
-			xpos, ypos, r = self.get_valid_randoms()
-			direction = np.random.randint(0,7)
-			speed = np.random.randint(1,10)
+			xpos, ypos, r, direction = self.get_valid_randoms()
+			speed = np.random.randint(1,MAX_SPEED)
 			self.add_ball(xpos,ypos,r,direction,speed)
+		self.update_grid()
+		#print('Step {0} environment'.format(self.steps))
+		#self.print_grid()
+		polygons = []
+		for ball in self.balls:
+			polygons.append(Point(ball.x,ball.y).buffer(ball.radius))
+		for sensor in self.sensors:
+			sensor.update_raytrace(polygons)
+			sensor.update_sensor_grids()
+			#print('Sensor {0} visibility grid at step {1}'.format(i, self.steps))
+			#sensor.print_visibility_grid()	
+			#print('Sensor {0} occupancy grid at step {1}'.format(i, self.steps))
+			#sensor.print_occupancy_grid()
 	
 
 	def print_grid(self):
@@ -176,12 +201,13 @@ class Gui():
 		for sensor in self.env.sensors:
 			patches += sensor.update_raytrace(polygons)
 			sensor.update_sensor_grids()
-			sensor.print_visibility_grid()	
+			#sensor.print_visibility_grid()	
 			#sensor.print_occupancy_grid()	
 	
 		# update environment
 		self.env.update()
 		self.patches = patches
+		plt.pause(60)
 		return self.patches
 		
 
@@ -299,6 +325,8 @@ class Sensor:
 				if y3 < 0:
 					y3 = 0
 					x3 = width - height / (np.tan(np.radians(i)))
+				#print('2:({0},{1},{2})'.format(x2,y2,i))
+				#print('3:({0},{1})'.format(x3,y3))
 				fixed_ray1 = Sensor.Ray(x,y,x2,y2,i)	
 				fixed_ray2 = Sensor.Ray(x,y,x3,y3,i+91)	
 				ray1 = Sensor.Ray(x,y,x2,y2,i)	
@@ -352,7 +380,7 @@ class Sensor:
 			xmin = 2 * self.width
 			ymin = 2 * self.height
 			xval = 2 * self.width
-			yval = 2 * self.width
+			yval = 2 * self.height
 			found_intersect = False
 			for polygon in objects:
 				if self.fixed_rays[i].LineString.intersects(polygon):
@@ -368,12 +396,15 @@ class Sensor:
 					if abs(x-self.x) < xmin:
 						xmin = abs(x-self.x)
 						xval = x
+						self.rays[i].modified = True
 					if abs(y-self.y) < ymin:
 						ymin = abs(y-self.y)
 						yval = y
+						self.rays[i].modified = True
 			if not found_intersect:
 				xval = self.fixed_rays[i].x2
 				yval = self.fixed_rays[i].y2
+				self.rays[i].modified = False
 			self.rays[i].update_ray(xval,yval)
 			updated_ray = self.rays[i]
 			x,y = updated_ray.LineString.xy
@@ -394,7 +425,7 @@ class Sensor:
 		for ray in self.rays:
 			x_index = int(ray.x2)
 			y_index = int(ray.y2)
-			if(x_index >= 0 and x_index < self.width and y_index >= 0 and y_index < self.height):
+			if(x_index >= 0 and x_index < self.width and y_index >= 0 and y_index < self.height and ray.modified):
 				self.occupancy_grid[self.height-1-y_index][x_index] = 1
 
 	def print_visibility_grid(self):
@@ -414,6 +445,7 @@ class Sensor:
 			self.y2 = y2
 			self.LineString = LineString([(x,y), (x2,y2)])
 			self.theta = theta
+			self.modified = False
 		
 		def update_ray(self, x2, y2):
 			self.LineString = LineString([(self.x,self.y), (x2,y2)])
@@ -426,14 +458,14 @@ def main():
 	env = Environment(WIDTH, HEIGHT)
 	
 	# Sensor Creation
-	sensor_0 = Sensor(WIDTH/2, HEIGHT, SOUTH, WIDTH, HEIGHT) # top center
+	sensor_0 = Sensor(WIDTH, HEIGHT/2, WEST, WIDTH, HEIGHT) # right center
 	#sensor_1 = Sensor(WIDTH, HEIGHT, SOUTHWEST, WIDTH, HEIGHT) # top right
-	sensor_2 = Sensor(WIDTH, HEIGHT/2, WEST, WIDTH, HEIGHT) # right center
-	#sensor_3 = Sensor(WIDTH, 0, NORTHWEST, WIDTH, HEIGHT) # bottom right
-	sensor_4 = Sensor(WIDTH/2, 0, NORTH, WIDTH, HEIGHT) # bottom center
+	sensor_2 = Sensor(WIDTH/2, HEIGHT, SOUTH, WIDTH, HEIGHT) # top center
+	#sensor_3 = Sensor(0, HEIGHT, SOUTHEAST, WIDTH, HEIGHT) # top left
+	sensor_4 = Sensor(0, HEIGHT/2, EAST, WIDTH, HEIGHT) # left center
 	#sensor_5 = Sensor(0, 0, NORTHEAST, WIDTH, HEIGHT) # bottom left
-	sensor_6 = Sensor(0, HEIGHT/2, EAST, WIDTH, HEIGHT) # left center
-	#sensor_7 = Sensor(0, HEIGHT, SOUTHEAST, WIDTH, HEIGHT) # top left
+	sensor_6 = Sensor(WIDTH/2, 0, NORTH, WIDTH, HEIGHT) # bottom center
+	#sensor_7 = Sensor(WIDTH, 0, NORTHWEST, WIDTH, HEIGHT) # bottom right
 	
 	env.add_sensor(sensor_0)
 	#env.add_sensor(sensor_1)
@@ -451,35 +483,34 @@ def main():
 
 	#plt.show()	
 
-
-		
+	sequences = []	
 	data = []	
-	while(env.steps < 20):
-		start = timer()
+	#start = timer()
+	for _ in range(KICK_START):
+		env.update()
+
+	while(env.steps < NUM_STEPS + KICK_START):	
 		step_data = []
-		polygons = []
-		for ball in env.balls:
-			polygons.append(Point(ball.x,ball.y).buffer(ball.radius))
 		step_data.append(env.env_grid)
-		#print('Step {0} environment'.format(env.steps))
-		#env.print_grid()
 		for sensor in env.sensors:
 			sensor_data = []
-			sensor.update_raytrace(polygons)
-			sensor.update_sensor_grids()
 			sensor_data.append(sensor.visibility_grid)
 			sensor_data.append(sensor.occupancy_grid)
-			#print('Sensor {0} visibility grid at step {1}'.format(i, env.steps))
-			#sensor.print_visibility_grid()	
-			#print('Sensor {0} occupancy grid at step {1}'.format(env.steps, env.steps))
-			#sensor.print_occupancy_grid()
 			step_data.append(sensor_data)
 		data.append(step_data)	
 		env.update()
-		end = timer()
-		print('{0}: {1}, {2}'.format(str(env.steps), str(end-start), str(len(env.balls))))	
-	np.save('training_data', data)
+		real_step = env.steps-KICK_START	
+		if real_step%20 == 0: #sequence length of 20 time steps
+			sequences.append(data)
+			data = []
+		if real_step%100 == 0:
+			print(real_step)
+		if real_step%1000 == 0: #save last 1000 time sequences
+			np.save('training_data{0}'.format(real_step), sequences)
+			sequences = []
+	#end = timer()
+	#print('total time: {0}'.format(end-start))
+
 
 if __name__ == '__main__':
-	main()	
-	
+	main()		
