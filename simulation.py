@@ -12,7 +12,7 @@ MAX_SIZE = 5
 MAX_BALLS = 8
 MAX_SPEED = 3 
 KICK_START = 6
-NUM_STEPS = 20
+NUM_STEPS = 200000
 DELAY = 1
 
 EAST = 0
@@ -86,12 +86,13 @@ class Environment:
 	def update_grid(self):
 		self.env_grid = [[0 for x in range(self.width)] for y in range(self.height)]
 		ball_polys = [Point(ball.x,ball.y).buffer(ball.radius) for ball in self.balls]
-		ball_poly = cascaded_union(ball_polys)
-		for x in range(self.width):
-			for y in range(self.height):
-				b = box(x,y,x+1,y+1)
-				if ball_poly.intersects(b):
-					self.env_grid[self.height-1-y][x] = 1
+		if len(ball_polys) > 0:
+			ball_poly = cascaded_union(ball_polys)
+			for x in range(self.width):
+				for y in range(self.height):
+					b = box(x,y,x+1,y+1)
+					if ball_poly.intersects(b):
+						self.env_grid[self.height-1-y][x] = 1
 
 
 	def update(self):
@@ -505,7 +506,7 @@ def main():
 			data = []
 		if real_step%100 == 0:
 			print(real_step)
-		if real_step%1000 == 0: #save last 1000 time sequences
+		if real_step%20000 == 0: #save last 1000 time sequences
 			np.save('training_data{0}'.format(real_step), sequences)
 			sequences = []
 	#end = timer()

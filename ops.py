@@ -23,7 +23,7 @@ def loss_fun(mask, labels):
   return loss
 
 def loss_fun_flat(mask):
-  mask = keras.layers.Reshape((10,64,64,1))(mask)
+  mask = keras.layers.Reshape((10,50,50,1))(mask)
   def loss(y_true, y_pred):
     new_pred = keras.layers.multiply([mask,y_pred])
     return K.binary_crossentropy(y_true, new_pred)

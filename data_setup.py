@@ -20,7 +20,7 @@ def split_data(data_file):
             new_data[i, j, :, :, 0] = sequence[j][1][1]  # sensor 0 occupancy grid
             new_data[i, j, :, :, 1] = sequence[j][1][0]  # sensor 0 visibility grid
 
-        np.save('data/{0}.npy'.format(i), new_data[i, :, :, :, :])
+        np.save('data/{0}.npy'.format(i+1000), new_data[i, :, :, :, :])
 
 
 split_data('training_data20000.npy')

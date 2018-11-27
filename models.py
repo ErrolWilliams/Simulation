@@ -64,7 +64,7 @@ def model_flat(input_shape, learning_rate, training = True):
     x = keras.layers.Lambda(whitten)(input_layer)
   else:
     x = input_layer
-  mask = keras.layers.Reshape(( 10,64,64,1))(input_layer[:,10:,:,:,1])
+  mask = keras.layers.Reshape(( 10,50,50,1))(input_layer[:,10:,:,:,1])  # visibility grids
   x = keras.layers.Lambda(whitten)(input_layer)
   x = TimeDistributed(Conv2D(8, kernel_size=(7,7), 
         activation=leaky_relu,
