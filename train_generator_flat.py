@@ -27,11 +27,10 @@ K.set_image_data_format("channels_last")
 
 #val_index = np.load('testData/0.npy')
 #tr_index = np.load('testData/5.npy')
-val_index = np.arange(100, 200)
-tr_index = np.arange(100)
+val_index = np.arange(3000,6000)
+tr_index = np.arange(3000)
 mode_test = False
 reload_model = False
-make_prediction = True
 learning_rate = 0.001
 path_model = 'models/sensor_review_.98-0.04.hdf5'
 initial_epoch = 0
@@ -42,7 +41,7 @@ params = {'dim': (20, 50, 50),
           'nbatch': 10,
           'n_channels': 2,
           'shuffle': True,
-          'load_path': 'data/'}
+          'load_path': 'sensor1_data/'}
 
 input_shape = (*params['dim'], params['n_channels'])
 
@@ -60,7 +59,7 @@ model = model_flat(input_shape=input_shape, learning_rate=learning_rate, trainin
 
 # Write a csv file with loss function after each epoch
 csvlogName = 'models/sensor_review_' + str(initial_epoch) + '.csv'
-fp = 'models/sensor_review_.{epoch:02d}-{loss:.2f}.hdf5'
+fp = 'models/noGPU_sensor1_review_.{epoch:02d}-{loss:.2f}.hdf5'
 
 csv_logger = CSVLogger(csvlogName)
 
@@ -81,9 +80,9 @@ if reload_model:
 print('Started training')
 t0 = time.time()
 
-if not make_prediction:
+if not mode_test:
     model.fit_generator(generator=training_generator,
-                        epochs=100, verbose=1,
+                        epochs=3, verbose=1,
                         validation_data=validation_generator,
                         # use_multiprocessing=True,
                         initial_epoch=initial_epoch,
@@ -98,11 +97,10 @@ def toArray(tensor):
             arr[x][y] = tensor[0, 0, x, y, 0]
     return arr
 
-if make_prediction:
+if mode_test:
     input = np.ndarray(shape=(10,20,50,50,2))
     for i in range(10):
-        input[i, :, :, :, :] = np.load('data/0.npy')  # step i data
-        inputs.append(input[i, :, :, :, :])
+        input[i, :, :, :, :] = np.load('sensor1_data/0.npy')  # step i data
     output = model.predict(input)
     out = [[0 for x in range(50)] for y in range(50)]
     print(out)
