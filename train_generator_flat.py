@@ -34,8 +34,8 @@ mode_test = False
 test_multi = False
 reload_model = False
 learning_rate = 0.01
-model_group = 'models/test_models/'
-model_folder = 'left_right_model/'
+model_group = 'models/aws_models/'
+model_folder = 'top_bottom/'
 path_model = model_group + model_folder
 if not os.path.exists(path_model):
     os.makedirs(path_model)
@@ -47,8 +47,9 @@ params = {'dim': (20, 50, 50),
           'nbatch': 10,
           'n_channels': 2,
           'shuffle': True,
-          'load_path': ['sensor_data/left_sensor_data/', 'sensor_data/right_sensor_data/']}
+          'load_path': ['sensor_data/top_sensor_data/', 'sensor_data/bottom_sensor_data/'] }
 
+#['sensor_data/left_sensor_data/', 'sensor_data/right_sensor_data/']
 input_shape = (*params['dim'], params['n_channels'])
 
 # For testing on 100 samples on CPU
@@ -67,7 +68,7 @@ model = model_flat(input_shape=input_shape, learning_rate=learning_rate, trainin
 csvlogName = path_model + '.csv'
 fp = path_model + '{epoch:02d}-{loss:.2f}.hdf5'
 
-csv_logger = CSVLogger(csvlogName)
+csv_logger = CSVLogger(csvlogName, append=True)
 
 # Reduce learning rate if loss is not decreasing
 reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5,
@@ -75,8 +76,8 @@ reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5,
 
 # Save last model weights
 checkpointer = ModelCheckpoint(filepath=fp, monitor='loss', verbose=0,
-                                               save_best_only=True,
-                                               save_weights_only=True,
+                                               save_best_only=False,
+                                               save_weights_only=False,
                                                mode='auto',
                                                period=1)
 # Load pretrained model
@@ -98,7 +99,7 @@ if not mode_test:
 
     tf = time.time()
     time_file = np.array([t0, tf, tf - t0])
-    np.save(path_model + str(initial_epoch) + '.npy', time_file)
+    np.save(path_model + 'time.npy', time_file)
 
 if mode_test:
     input = np.ndarray(shape=(1, 20, 50, 50, 2))
