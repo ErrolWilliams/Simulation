@@ -118,7 +118,7 @@ class DataGenerator_flat(keras.utils.Sequence):
         X = X.astype('float32')
         X[X > 0] = X[X > 0] / X[X > 0]
         # Y is the occupancy grid on X (position 0), last 10 frames
-        Y = np.copy(X[:, :, 10:, :, :, 0]).reshape((self.nbatch, self.dim[0], 10, self.dim[1], self.dim[2], 1))
+        Y = np.copy(X[:, 10:, :, :, 0]).reshape((self.nbatch, 10, self.dim[1], self.dim[2], 1))
         return X, Y
 
     def __data_generation(self, list_IDs_temp):
@@ -126,8 +126,7 @@ class DataGenerator_flat(keras.utils.Sequence):
         X = np.empty((self.nbatch, *self.dim, 2))
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
-            for j in range(self.dim[0]):
-                X[i, j,] = np.load(self.load_path + 'sensor{0}data/{1}.npy'.format(j, str(ID)))
+            X[i,] = np.load(self.load_path + str(ID) + '.npy')
         X, Y = self.__preprocess(X)
         return X, Y
 
@@ -187,7 +186,6 @@ class DataGenerator_flat_multi(keras.utils.Sequence):
             for j in range(len(self.load_path)):
                 temp_data = np.load(self.load_path[j] + str(ID) + '.npy')
                 data = np.bitwise_or(data, temp_data)
-                # data = data.astype(np.int, copy=False)
             X1[i,] = data
         X, Y = self.__preprocess(X1)
         return X, Y

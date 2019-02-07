@@ -34,8 +34,8 @@ mode_test = False
 test_multi = False
 reload_model = False
 learning_rate = 0.01
-model_group = 'models/aws_models/'
-model_folder = 'top_bottom/'
+model_group = 'models/test_models/'
+model_folder = 'test_multi/100-15.68.hdf5'
 path_model = model_group + model_folder
 if not os.path.exists(path_model):
     os.makedirs(path_model)
@@ -47,9 +47,9 @@ params = {'dim': (20, 50, 50),
           'nbatch': 10,
           'n_channels': 2,
           'shuffle': True,
-          'load_path': ['sensor_data/top_sensor_data/', 'sensor_data/bottom_sensor_data/'] }
+          'load_path': ['sensor_data/top_sensor_data/', 'sensor_data/left_sensor_data/']}
 
-#['sensor_data/left_sensor_data/', 'sensor_data/right_sensor_data/']
+# ['sensor_data/left_sensor_data/', 'sensor_data/right_sensor_data/']
 input_shape = (*params['dim'], params['n_channels'])
 
 # For testing on 100 samples on CPU
@@ -76,13 +76,13 @@ reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5,
 
 # Save last model weights
 checkpointer = ModelCheckpoint(filepath=fp, monitor='loss', verbose=0,
-                                               save_best_only=False,
-                                               save_weights_only=False,
-                                               mode='auto',
-                                               period=1)
+                               save_best_only=False,
+                               save_weights_only=False,
+                               mode='auto',
+                               period=1)
 # Load pretrained model
 if reload_model:
-    model.load_weights(path_model + '.hdf5')
+    model.load_weights(path_model)
 
 if not mode_test:
     print('Started training')
@@ -108,14 +108,14 @@ if mode_test:
         input[:, :, :, :, :] = np.load('sensor_data/right_sensor_data/0.npy')  # vis and occ grids
         env[:, :, :] = np.load('sensor_data/env_data/0.npy')  # env grids
     else:
-        right_data = np.load('sensor_data/right_sensor_data/0.npy')  # 20 vis and occ grids for right sensor
-        #top_data = np.load('sensor_data/top_sensor_data/0.npy')  # 20 vis and occ grids for top sensor
-        left_data = np.load('sensor_data/left_sensor_data/0.npy')  # 20 vis and occ grids for left sensor
-        #bottom_data = np.load('sensor_data/bottom_sensor_data/0.npy')  # 20 vis and occ grids for bottomsensor
+        # right_data = np.load('sensor_data/right_sensor_data/0.npy')  # 20 vis and occ grids for right sensor
+        top_data = np.load('sensor_data/top_sensor_data/0.npy')  # 20 vis and occ grids for top sensor
+        # left_data = np.load('sensor_data/left_sensor_data/0.npy')  # 20 vis and occ grids for left sensor
+        bottom_data = np.load('sensor_data/bottom_sensor_data/0.npy')  # 20 vis and occ grids for bottomsensor
 
-        input_data = np.bitwise_or(right_data, left_data)
-        #input_data = np.bitwise_or(data1, data3)
-        #input_data = np.bitwise_or(input_data, data4)
+        input_data = np.bitwise_or(top_data, bottom_data)
+        # input_data = np.bitwise_or(data1, data3)
+        # input_data = np.bitwise_or(input_data, data4)
         # input_data = input_data.astype(np.int, copy=False)
         input[:, :, :, :, :] = input_data
         env[:, :, :] = np.load('sensor_data/env_data/0.npy')  # 20 env grids
