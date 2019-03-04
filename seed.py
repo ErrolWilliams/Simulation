@@ -26,7 +26,7 @@ from keras import backend as K
 # For further details, see:
 # https://www.tensorflow.org/api_docs/python/tf/set_random_seed
 
-tf.set_random_seed(100)
+tf.set_random_seed(2342342)
 
 sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
 K.set_session(sess)
