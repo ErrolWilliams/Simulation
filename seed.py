@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 import random as rn
 
+
 # The below is necessary for starting Numpy generated random numbers
 # in a well-defined initial state.
 
