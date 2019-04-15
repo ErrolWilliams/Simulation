@@ -56,12 +56,14 @@ def model_labels(input_shape, learning_rate, metrics=['mse'], training=True):
 
 def model_flat(input_shape, learning_rate, training=True):
     input_layer = Input(shape=input_shape, name='input_layer')
+    width = input_shape[1]
+    height = input_shape[2]
     # For the flat model occupancy is index 0
     if training:
         x = keras.layers.Lambda(whitten)(input_layer)
     else:
         x = input_layer
-    mask = keras.layers.Reshape((10, 50, 50, 1))(input_layer[:, 10:, :, :, 1])  # last 10 visibility grids
+    mask = keras.layers.Reshape((10, width, height, 1))(input_layer[:, 10:, :, :, 1])  # last 10 visibility grids
     x = keras.layers.Lambda(whitten)(input_layer)
     x = TimeDistributed(Conv2D(8, kernel_size=(7, 7),
                                activation=leaky_relu,
@@ -77,7 +79,7 @@ def model_flat(input_shape, learning_rate, training=True):
     if not training:
         for layer in model.layers:
             layer.trainable = False
-    model.compile(loss=loss_fun_flat(mask),
+    model.compile(loss=loss_fun_flat(mask, width, height),
                   optimizer=keras.optimizers.Adam(lr=learning_rate),
                   metrics=['mse'])
     return model

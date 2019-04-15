@@ -181,7 +181,7 @@ class DataGenerator_flat_multi(keras.utils.Sequence):
         X1 = np.empty((self.nbatch, *self.dim, 2))
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
-            data = np.zeros((20, 50, 50, 2))
+            data = np.zeros((20, self.dim[1], self.dim[2], 2))
             data = data.astype(np.int, copy=False)
             for j in range(len(self.load_path)):
                 temp_data = np.load(self.load_path[j] + str(ID) + '.npy')

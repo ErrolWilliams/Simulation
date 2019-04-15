@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import time
 import os
+from view import show
+import csv
 
 #############  KERAS OBJECTS
 # from __future__ import print_function
@@ -17,7 +19,7 @@ import tensorflow as tf
 from my_classes import DataGenerator_flat, DataGenerator_flat_multi
 from models import model_flat
 from ops import *
-from view import show_predictions
+from view import show_predictions, get_stats
 
 K.set_image_data_format("channels_last")
 
@@ -35,7 +37,7 @@ test_multi = False
 reload_model = False
 learning_rate = 0.01
 model_group = 'models/test_models/'
-model_folder = 'test_multi/100-15.68.hdf5'
+model_folder = 'bottom61/'
 path_model = model_group + model_folder
 if not os.path.exists(path_model):
     os.makedirs(path_model)
@@ -43,11 +45,11 @@ initial_epoch = 0
 # Parameters
 
 # Input dimensions, parameters for training
-params = {'dim': (20, 50, 50),
+params = {'dim': (20, 25, 25),
           'nbatch': 10,
           'n_channels': 2,
           'shuffle': True,
-          'load_path': ['sensor_data/top_sensor_data/', 'sensor_data/left_sensor_data/']}
+          'load_path': ['sensor_data_61/bottom_sensor_data/']}
 
 # ['sensor_data/left_sensor_data/', 'sensor_data/right_sensor_data/']
 input_shape = (*params['dim'], params['n_channels'])
@@ -89,7 +91,7 @@ if not mode_test:
     t0 = time.time()
 
     model.fit_generator(generator=training_generator,
-                        epochs=100, verbose=1,
+                        epochs=50, verbose=1,
                         validation_data=validation_generator,
                         # use_multiprocessing=True,
                         initial_epoch=initial_epoch,
@@ -102,24 +104,53 @@ if not mode_test:
     np.save(path_model + 'time.npy', time_file)
 
 if mode_test:
-    input = np.ndarray(shape=(1, 20, 50, 50, 2))
-    env = np.ndarray(shape=(20, 50, 50))
-    if not test_multi:
-        input[:, :, :, :, :] = np.load('sensor_data/right_sensor_data/0.npy')  # vis and occ grids
-        env[:, :, :] = np.load('sensor_data/env_data/0.npy')  # env grids
-    else:
-        # right_data = np.load('sensor_data/right_sensor_data/0.npy')  # 20 vis and occ grids for right sensor
-        top_data = np.load('sensor_data/top_sensor_data/0.npy')  # 20 vis and occ grids for top sensor
-        # left_data = np.load('sensor_data/left_sensor_data/0.npy')  # 20 vis and occ grids for left sensor
-        bottom_data = np.load('sensor_data/bottom_sensor_data/0.npy')  # 20 vis and occ grids for bottomsensor
+    sample_num = 1
+    model_files = os.listdir(path_model)
+    model_files = [x for x in model_files if '.hdf5' in x]
+    model_files = model_files[:30]
+    ball_error_means = []
+    empty_error_means = []
+    for file in model_files:
+        print(file)
+        model.load_weights(path_model + file)
+        ball_errors_total = 0
+        empty_errors_total = 0
+        for i in range(sample_num):
+            input = np.ndarray(shape=(1, 20, 50, 50, 2))
+            env = np.ndarray(shape=(20, 50, 50))
+            if not test_multi:
+                input[:, :, :, :, :] = np.load('sensor_data/right_sensor_data/{0}.npy'.format(i))  # vis and occ grids
+                env[:, :, :] = np.load('sensor_data/env_data/{0}.npy'.format(i))  # env grids
+            else:
+                right_data = np.load('sensor_data/right_sensor_data/{0}.npy'.format(i))  # 20 vis and occ grids for right sensor
+                top_data = np.load('sensor_data/sensor1_data/{0}.npy'.format(i))  # 20 vis and occ grids for top sensor
+                left_data = np.load('sensor_data/sensor2_data/{0}.npy'.format(i))  # 20 vis and occ grids for left sensor
+                bottom_data = np.load('sensor_data/sensor3_data/{0}.npy'.format(i))  # 20 vis and occ grids for bottomsensor
 
-        input_data = np.bitwise_or(top_data, bottom_data)
-        # input_data = np.bitwise_or(data1, data3)
-        # input_data = np.bitwise_or(input_data, data4)
-        # input_data = input_data.astype(np.int, copy=False)
-        input[:, :, :, :, :] = input_data
-        env[:, :, :] = np.load('sensor_data/env_data/0.npy')  # 20 env grids
-    output = model.predict(input)
-    input = input[:, :10, :, :, :]
-    show_predictions(input, output, env)
-    exit(0)
+                input_data = bottom_data
+                #input_data = np.bitwise_or(input_data, bottom_data)
+                #input_data = np.bitwise_or(input_data, top_data)
+                #input_data = np.bitwise_or(input_data, right_data)
+                #input_data = input_data.astype(np.int, copy=False)
+                input[:, :, :, :, :] = input_data
+                env[:, :, :] = np.load('sensor_data/env_data/{0}.npy'.format(i))  # 20 env grids
+            output = model.predict(input)
+            input = input[:, :10, :, :, :]
+            show_predictions(input, output, env)
+            ball_error_pct, empty_error_pct = get_stats(output, env)
+            ball_errors_total += ball_error_pct
+            empty_errors_total += empty_error_pct
+        ball_error_means.append(ball_errors_total/sample_num)
+        empty_error_means.append(empty_errors_total/sample_num)
+
+    rows = zip(ball_error_means, empty_error_means)
+    with open(path_model + 'l_r_errors-2.csv', 'w', newline='') as myfile:
+        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+        for row in rows:
+            wr.writerow(row)
+    """
+    env = np.load('sensor_data_33/env_data/0.npy')
+    top = np.load('sensor_data_33/right_sensor_data/0.npy')
+    show(env[0])
+    show(top[15, :, :, 0])
+    """

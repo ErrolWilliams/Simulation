@@ -95,7 +95,7 @@ def show_predictions(input, output, envs):
     for i in range(10):
         input_envs.append(envs[i, :, :])
 
-    show_inputs(input_ocs, input_vis, input_envs)
+    #show_inputs(input_ocs, input_vis, input_envs)
 
     predicted_arrs, _ = toArrays(output)
     predicted_arrs = predicted_arrs[0]
@@ -107,7 +107,37 @@ def show_predictions(input, output, envs):
     show_outputs(predicted_arrs, output_env)
 
 
+def get_stats(output, envs):
+    predicted_arrs, _ = toArrays(output)
+    predicted_arrs = predicted_arrs[0]
+
+    output_env = []
+    for i in range(10):
+        output_env.append(envs[i + 10, :, :])
+
+    ball_errors = 0
+    ball_total = 0
+    empty_errors = 0
+    empty_total = 0
+    for i in range(50):
+        for j in range(50):
+            if output_env[0][i][j] == 0:   #black
+                empty_total += 1
+                if predicted_arrs[0][i][j] > 0.5: #predicted closer to white
+                    empty_errors += 1
+            else:
+                ball_total += 1
+                if predicted_arrs[0][i][j] < 0.5: #predicted closer to black
+                    ball_errors += 1
+    ball_error_pct = ball_errors/ball_total
+    empty_error_pct = empty_errors/empty_total
+    return ball_error_pct,empty_error_pct
+
+
+
+
+
 def show(data_arr):
     fig = plt.figure()
-    plt.imshow(data_arr)
+    plt.imshow(data_arr, cmap='magma', vmin=0, vmax=1, origin='lower')
     plt.show()

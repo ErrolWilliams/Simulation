@@ -34,8 +34,8 @@ def loss_fun(mask, labels):
     return loss
 
 
-def loss_fun_flat(mask):
-    mask = keras.layers.Reshape((10, 50, 50, 1))(mask)
+def loss_fun_flat(mask, width, height):
+    mask = keras.layers.Reshape((10, width, height, 1))(mask)
 
     def loss(y_true, y_pred):
         new_pred = keras.layers.multiply([mask, y_pred])
