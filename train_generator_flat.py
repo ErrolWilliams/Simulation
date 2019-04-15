@@ -67,7 +67,7 @@ validation_generator = DataGenerator_flat_multi(partition['validation'], **param
 model = model_flat(input_shape=input_shape, learning_rate=learning_rate, training=True)
 
 # Write a csv file with loss function after each epoch
-csvlogName = path_model + '.csv'
+csvlogName = path_model + 'log.csv'
 fp = path_model + '{epoch:02d}-{loss:.2f}.hdf5'
 
 csv_logger = CSVLogger(csvlogName, append=True)
