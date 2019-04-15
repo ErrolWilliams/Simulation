@@ -19,7 +19,7 @@ import tensorflow as tf
 from my_classes import DataGenerator_flat, DataGenerator_flat_multi
 from models import model_flat
 from ops import *
-from view import show_predictions, get_stats
+from view import show_predictions, show_predictions2, get_stats
 
 K.set_image_data_format("channels_last")
 
@@ -30,16 +30,16 @@ K.set_image_data_format("channels_last")
 
 # val_index = np.load('testData/0.npy')
 # tr_index = np.load('testData/5.npy')
-val_index = np.arange(4000, 5000)
-tr_index = np.arange(4000)
-mode_test = True
+val_index = np.arange(9000, 10000)
+tr_index = np.arange(9000)
+mode_test = False
 test_multi = False
 reload_model = False
 learning_rate = 0.01
 width = 25
 height = 25
-model_group = 'models/test_models/'
-model_folder = 'bottom61/'
+model_group = 'models/aws_models/'
+model_folder = 'all_sensors/'
 data_folder = 'sensor_data_61'
 path_model = model_group + model_folder
 if not os.path.exists(path_model):
@@ -107,14 +107,14 @@ if not mode_test:
     np.save(path_model + 'time.npy', time_file)
 
 if mode_test:
-    sample_num = 1
+    sample_num = 25
     model_files = os.listdir(path_model)
-    model_files = [x for x in model_files if '.hdf5' in x]
-    model_files = model_files[:30]
+    model_files = [x for x in model_files if '.hdf5' in x and '_2' in x]
+    model_files = model_files[:20]
     ball_error_means = []
     empty_error_means = []
+    predictions = []
     for file in model_files:
-        print(file)
         model.load_weights(path_model + file)
         ball_errors_total = 0
         empty_errors_total = 0
@@ -126,31 +126,27 @@ if mode_test:
             left_data = np.load(data_folder + '/left_sensor_data/{0}.npy'.format(i))  # 20 vis and occ grids for left sensor
             bottom_data = np.load(data_folder + '/bottom_sensor_data/{0}.npy'.format(i))  # 20 vis and occ grids for bottomsensor
 
-            input_data = bottom_data
-            #input_data = np.bitwise_or(input_data, bottom_data)
-            #input_data = np.bitwise_or(input_data, top_data)
-            #input_data = np.bitwise_or(input_data, right_data)
+            input_data = top_data
+            input_data = np.bitwise_or(input_data, right_data)
+            input_data = np.bitwise_or(input_data, bottom_data)
+            input_data = np.bitwise_or(input_data, left_data)
             #input_data = input_data.astype(np.int, copy=False)
             input[:, :, :, :, :] = input_data
             env[:, :, :] = np.load(data_folder + '/env_data/{0}.npy'.format(i))  # 20 env grids
             output = model.predict(input)
             input = input[:, :10, :, :, :]
-            show_predictions(input, output, env, width, height)
+            #show_predictions(input, output, env, width, height)
             ball_error_pct, empty_error_pct = get_stats(output, env, width, height)
             ball_errors_total += ball_error_pct
             empty_errors_total += empty_error_pct
+            prediction = output[0, 0, :, :, 0]
+            predictions.append(output[0, 0, :, :, 0])
         ball_error_means.append(ball_errors_total/sample_num)
         empty_error_means.append(empty_errors_total/sample_num)
+    #show_predictions2(predictions)
 
-    """
     rows = zip(ball_error_means, empty_error_means)
-    with open(path_model + 'l_r_errors-2.csv', 'w', newline='') as myfile:
+    with open(path_model + 'errors.csv', 'w', newline='') as myfile:
         wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
         for row in rows:
             wr.writerow(row)
-            
-    env = np.load('sensor_data_33/env_data/0.npy')
-    top = np.load('sensor_data_33/right_sensor_data/0.npy')
-    show(env[0])
-    show(top[15, :, :, 0])
-    """

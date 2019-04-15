@@ -18,7 +18,7 @@ def view():
             else:
                 img = seq[start_step + i][(j + 1) / 2][np.abs(j % 2 - 1)]
             ax = fig.add_subplot(rows, steps, j * steps + (i + 1))
-            ax.imshow(img, cmap='gray')
+            ax.imshow(img, cmap='gray', origin='lower')
             ax.axis('off')
     plt.show()
 
@@ -65,7 +65,7 @@ def show_inputs(occ, vis, env, width, height):
             img = vis[i - 21]  # vis
         fig.add_subplot(rows, columns, i)
         plt.axis('off')
-        plt.imshow(img, cmap='magma')
+        plt.imshow(img, cmap='magma', origin='lower')
     plt.show()
 
 
@@ -82,7 +82,7 @@ def show_outputs(out_arrs, env, width, height):
             img = out_arrs[i - 11]  # occ
         fig.add_subplot(rows, columns, i)
         plt.axis('off')
-        plt.imshow(img, cmap='magma')
+        plt.imshow(img, cmap='magma', origin='lower')
     plt.show()
 
 
@@ -140,4 +140,44 @@ def get_stats(output, envs, width, height):
 def show(data_arr):
     fig = plt.figure()
     plt.imshow(data_arr, cmap='magma', vmin=0, vmax=1, origin='lower')
+    plt.show()
+
+def show_predictions2(data_arrs):
+    fig = plt.figure(figsize=(8, 8))
+    columns = 5
+    rows = 4
+
+    ax = []
+
+    for i in range(1, columns * rows + 1):
+        img = data_arrs[i-1]
+        ax.append(fig.add_subplot(rows, columns, i))
+        ax[-1].set_title("Epoch:" + str(i))  # set title
+        plt.axis('off')
+        plt.imshow(img, cmap='magma', vmin=0, vmax=1, origin='lower')
+    plt.show()
+
+def show_env_and_grids(env, occ, vis):
+    fig = plt.figure(figsize=(8, 8))
+    columns = 3
+    rows = 1
+
+    ax = []
+
+    for i in range(1, columns * rows + 1):
+        if i == 1:
+            img = env
+        elif i == 2:
+            img = occ
+        else:
+            img = vis
+        ax.append(fig.add_subplot(rows, columns, i))
+        if i == 1:
+            ax[-1].set_title("Environment")  # set title
+        elif i == 2:
+            ax[-1].set_title("Visibility Grid")  # set title
+        else:
+            ax[-1].set_title("Occupancy Grid")  # set title
+        plt.axis('off')
+        plt.imshow(img, cmap='magma', vmin=0, vmax=1, origin='lower')
     plt.show()

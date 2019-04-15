@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from view import show
+from view import show, show_env_and_grids
 
 width = 25
 height = 25
@@ -48,12 +48,13 @@ def fix_envs(env_data_dir):
         np.save(env_data_dir + '{0}.npy'.format(i), env)
 
 if __name__ == '__main__':
-    fix_envs('sensor_data_61/env_data/')
+    envs = np.load('sensor_data_61/env_data/0.npy')
+    env = envs[0]
+    data = np.load('sensor_data_61/bottom_sensor_data/0.npy')
+    vis = data[0, :, :, 0]
+    occ = data[0, :, :, 1]
+    show_env_and_grids(env, occ, vis)
     exit(0)
-    data = np.load('sensor_data_61/env_data/0.npy')
-    show(data[39])
-    data_2 = np.load('sensor_data_61/env_data/50000.npy')
-    show(data_2[19])
     for i in range(10):
         print(i+1)
         data_num = (i+1)*20000
