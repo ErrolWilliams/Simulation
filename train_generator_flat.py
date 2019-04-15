@@ -38,8 +38,8 @@ reload_model = False
 learning_rate = 0.01
 width = 25
 height = 25
-model_group = 'models/aws_models/'
-model_folder = 'all_sensors/'
+model_group = 'models/61_models/'
+model_folder = 'bottom22/'
 data_folder = 'sensor_data_61'
 path_model = model_group + model_folder
 if not os.path.exists(path_model):
@@ -49,7 +49,7 @@ initial_epoch = 0
 
 # Input dimensions, parameters for training
 params = {'dim': (20, width, height),
-          'nbatch': 10,
+          'nbatch': 50,
           'n_channels': 2,
           'shuffle': True,
           'load_path': [data_folder + '/bottom_sensor_data/']}
