@@ -23,7 +23,7 @@ def view():
     plt.show()
 
 
-def toArrays(data):
+def toArrays(data, width, height):
     occ_arrs = []
     vis_arrs = []
     num_seq = data.shape[0]
@@ -33,11 +33,11 @@ def toArrays(data):
         occs = []
         viss = []
         for j in range(num_step):
-            occ = [[0 for x in range(50)] for y in range(50)]
+            occ = [[0 for x in range(width)] for y in range(height)]
             if get_vis:
-                vis = [[0 for x in range(50)] for y in range(50)]
-            for x in range(50):
-                for y in range(50):
+                vis = [[0 for x in range(width)] for y in range(height)]
+            for x in range(width):
+                for y in range(height):
                     occ[x][y] = data[i, j, x, y, 0]
                     if get_vis:
                         vis[x][y] = data[i, j, x, y, 1]
@@ -50,9 +50,9 @@ def toArrays(data):
     return occ_arrs, vis_arrs
 
 
-def show_inputs(occ, vis, env):
-    w = 50
-    h = 50
+def show_inputs(occ, vis, env, width, height):
+    w = width
+    h = height
     fig = plt.figure(figsize=(8, 8))
     columns = 10
     rows = 3
@@ -69,9 +69,9 @@ def show_inputs(occ, vis, env):
     plt.show()
 
 
-def show_outputs(out_arrs, env):
-    w = 50
-    h = 50
+def show_outputs(out_arrs, env, width, height):
+    w = width
+    h = height
     fig = plt.figure(figsize=(8, 8))
     columns = 10
     rows = 2
@@ -86,8 +86,8 @@ def show_outputs(out_arrs, env):
     plt.show()
 
 
-def show_predictions(input, output, envs):
-    input_ocs, input_vis = toArrays(input)
+def show_predictions(input, output, envs, width, height):
+    input_ocs, input_vis = toArrays(input, width, height)
 
     input_ocs = input_ocs[0]
     input_vis = input_vis[0]
@@ -97,18 +97,18 @@ def show_predictions(input, output, envs):
 
     #show_inputs(input_ocs, input_vis, input_envs)
 
-    predicted_arrs, _ = toArrays(output)
+    predicted_arrs, _ = toArrays(output, width, height)
     predicted_arrs = predicted_arrs[0]
 
     output_env = []
     for i in range(10):
         output_env.append(envs[i + 10, :, :])
 
-    show_outputs(predicted_arrs, output_env)
+    show_outputs(predicted_arrs, output_env, width, height)
 
 
-def get_stats(output, envs):
-    predicted_arrs, _ = toArrays(output)
+def get_stats(output, envs, width, height):
+    predicted_arrs, _ = toArrays(output, width, height)
     predicted_arrs = predicted_arrs[0]
 
     output_env = []
@@ -119,8 +119,8 @@ def get_stats(output, envs):
     ball_total = 0
     empty_errors = 0
     empty_total = 0
-    for i in range(50):
-        for j in range(50):
+    for i in range(width):
+        for j in range(height):
             if output_env[0][i][j] == 0:   #black
                 empty_total += 1
                 if predicted_arrs[0][i][j] > 0.5: #predicted closer to white

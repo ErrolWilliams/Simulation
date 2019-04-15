@@ -1,9 +1,6 @@
 import os
 import numpy as np
-from shapely.geometry import box, Point, LineString
-from shapely.ops import cascaded_union, linemerge
 from view import show
-from simulation import Sensor
 
 width = 25
 height = 25
@@ -44,13 +41,19 @@ def split_data(data_src, data_dst_dir, save_num):
                 np.save(env_data_dest + '/{0}.npy'.format(i + save_num), env_states)
             np.save('{0}/sensor{1}_data/{2}.npy'.format(data_dst_dir, j, i + save_num), new_data[i, :, :, :, :])
 
+def fix_envs(env_data_dir):
+    env_files = os.listdir(env_data_dir)
+    for i,file in enumerate(env_files):
+        env = np.load(env_data_dir + file)[:20]
+        np.save(env_data_dir + '{0}.npy'.format(i), env)
 
 if __name__ == '__main__':
-    data = np.load('sensor_data_61/env_data/0.npy')
-    show(data[1])
-    data_2 = np.load('sensor_data_61/sensor3_data/0.npy')
-    show(data_2[1, :, :, 1])
+    fix_envs('sensor_data_61/env_data/')
     exit(0)
+    data = np.load('sensor_data_61/env_data/0.npy')
+    show(data[39])
+    data_2 = np.load('sensor_data_61/env_data/50000.npy')
+    show(data_2[19])
     for i in range(10):
         print(i+1)
         data_num = (i+1)*20000

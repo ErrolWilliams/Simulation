@@ -32,12 +32,15 @@ K.set_image_data_format("channels_last")
 # tr_index = np.load('testData/5.npy')
 val_index = np.arange(4000, 5000)
 tr_index = np.arange(4000)
-mode_test = False
+mode_test = True
 test_multi = False
 reload_model = False
 learning_rate = 0.01
+width = 25
+height = 25
 model_group = 'models/test_models/'
 model_folder = 'bottom61/'
+data_folder = 'sensor_data_61'
 path_model = model_group + model_folder
 if not os.path.exists(path_model):
     os.makedirs(path_model)
@@ -45,11 +48,11 @@ initial_epoch = 0
 # Parameters
 
 # Input dimensions, parameters for training
-params = {'dim': (20, 25, 25),
+params = {'dim': (20, width, height),
           'nbatch': 10,
           'n_channels': 2,
           'shuffle': True,
-          'load_path': ['sensor_data_61/bottom_sensor_data/']}
+          'load_path': [data_folder + '/bottom_sensor_data/']}
 
 # ['sensor_data/left_sensor_data/', 'sensor_data/right_sensor_data/']
 input_shape = (*params['dim'], params['n_channels'])
@@ -116,39 +119,36 @@ if mode_test:
         ball_errors_total = 0
         empty_errors_total = 0
         for i in range(sample_num):
-            input = np.ndarray(shape=(1, 20, 50, 50, 2))
-            env = np.ndarray(shape=(20, 50, 50))
-            if not test_multi:
-                input[:, :, :, :, :] = np.load('sensor_data/right_sensor_data/{0}.npy'.format(i))  # vis and occ grids
-                env[:, :, :] = np.load('sensor_data/env_data/{0}.npy'.format(i))  # env grids
-            else:
-                right_data = np.load('sensor_data/right_sensor_data/{0}.npy'.format(i))  # 20 vis and occ grids for right sensor
-                top_data = np.load('sensor_data/sensor1_data/{0}.npy'.format(i))  # 20 vis and occ grids for top sensor
-                left_data = np.load('sensor_data/sensor2_data/{0}.npy'.format(i))  # 20 vis and occ grids for left sensor
-                bottom_data = np.load('sensor_data/sensor3_data/{0}.npy'.format(i))  # 20 vis and occ grids for bottomsensor
+            input = np.ndarray(shape=(1, 20, width, height, 2))
+            env = np.ndarray(shape=(20, width, height))
+            right_data = np.load(data_folder + '/right_sensor_data/{0}.npy'.format(i))  # 20 vis and occ grids for right sensor
+            top_data = np.load(data_folder + '/top_sensor_data/{0}.npy'.format(i))  # 20 vis and occ grids for top sensor
+            left_data = np.load(data_folder + '/left_sensor_data/{0}.npy'.format(i))  # 20 vis and occ grids for left sensor
+            bottom_data = np.load(data_folder + '/bottom_sensor_data/{0}.npy'.format(i))  # 20 vis and occ grids for bottomsensor
 
-                input_data = bottom_data
-                #input_data = np.bitwise_or(input_data, bottom_data)
-                #input_data = np.bitwise_or(input_data, top_data)
-                #input_data = np.bitwise_or(input_data, right_data)
-                #input_data = input_data.astype(np.int, copy=False)
-                input[:, :, :, :, :] = input_data
-                env[:, :, :] = np.load('sensor_data/env_data/{0}.npy'.format(i))  # 20 env grids
+            input_data = bottom_data
+            #input_data = np.bitwise_or(input_data, bottom_data)
+            #input_data = np.bitwise_or(input_data, top_data)
+            #input_data = np.bitwise_or(input_data, right_data)
+            #input_data = input_data.astype(np.int, copy=False)
+            input[:, :, :, :, :] = input_data
+            env[:, :, :] = np.load(data_folder + '/env_data/{0}.npy'.format(i))  # 20 env grids
             output = model.predict(input)
             input = input[:, :10, :, :, :]
-            show_predictions(input, output, env)
-            ball_error_pct, empty_error_pct = get_stats(output, env)
+            show_predictions(input, output, env, width, height)
+            ball_error_pct, empty_error_pct = get_stats(output, env, width, height)
             ball_errors_total += ball_error_pct
             empty_errors_total += empty_error_pct
         ball_error_means.append(ball_errors_total/sample_num)
         empty_error_means.append(empty_errors_total/sample_num)
 
+    """
     rows = zip(ball_error_means, empty_error_means)
     with open(path_model + 'l_r_errors-2.csv', 'w', newline='') as myfile:
         wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
         for row in rows:
             wr.writerow(row)
-    """
+            
     env = np.load('sensor_data_33/env_data/0.npy')
     top = np.load('sensor_data_33/right_sensor_data/0.npy')
     show(env[0])
