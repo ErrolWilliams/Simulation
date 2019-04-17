@@ -40,7 +40,7 @@ learning_rate = 0.01
 width = 25
 height = 25
 model_group = 'models/61_models/'
-model_folder = '3_sensors/'
+model_folder = '2_sensors/'
 data_folder = 'sensor_data_61'
 path_model = model_group + model_folder
 if not os.path.exists(path_model):
@@ -53,7 +53,7 @@ params = {'dim': (20, width, height),
           'nbatch': 100,
           'n_channels': 2,
           'shuffle': True,
-          'load_path': [data_folder + '/bottom_sensor_data/', data_folder + '/top_sensor_data/', data_folder + '/right_sensor_data/']}
+          'load_path': [data_folder + '/left_sensor_data/', data_folder + '/right_sensor_data/']}
 
 # ['sensor_data/left_sensor_data/', 'sensor_data/right_sensor_data/']
 input_shape = (*params['dim'], params['n_channels'])
